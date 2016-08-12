@@ -2,6 +2,12 @@
 
 Playing with supervision trees
 
+To Run:
+
+```
+iex -S mix
+```
+
 To connect:
 
 ```
