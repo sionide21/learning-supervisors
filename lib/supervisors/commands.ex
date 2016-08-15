@@ -1,4 +1,6 @@
 defmodule Supervisor.Commands do
+  alias Supervisors.ClientState
+
   def run("echo " <> words, _) do
     words
   end
@@ -17,12 +19,16 @@ defmodule Supervisor.Commands do
     inspect(self)
   end
 
-  def run("exit", conn) do
+  def run("state", %{state: state}) do
+    inspect(ClientState.current_state(state))
+  end
+
+  def run("exit", %{handler: conn}) do
     send conn, :exit
     "goodbye"
   end
 
-  def run(<<4>>, conn), do: run("exit", conn)
+  def run(<<4>>, %{handler: conn}), do: run("exit", conn)
 
   def run(txt, _) do
     "Command not found: '#{txt}'"

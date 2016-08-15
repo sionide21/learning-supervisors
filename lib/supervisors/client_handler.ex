@@ -1,13 +1,24 @@
 defmodule Supervisors.ClientHandler do
   use GenServer
 
+  alias Supervisors.Client
+
   def start_link(client) do
     GenServer.start_link(__MODULE__, client)
   end
 
   def init(client) do
-    send self, :listen
+    send self, :load_state
     {:ok, client}
+  end
+
+  def handle_info(:load_state, client) do
+    client = %{client |
+      state: Client.fetch_state(client.parent),
+      handler: self
+    }
+    send self, :listen
+    {:noreply, client}
   end
 
   def handle_info(:listen, client) do
@@ -25,7 +36,7 @@ defmodule Supervisors.ClientHandler do
       |> prompt
       |> read_command
       |> String.trim
-      |> Supervisor.Commands.run(self)
+      |> Supervisor.Commands.run(client)
       |> send_reply(client)
     send self, :listen
   end
