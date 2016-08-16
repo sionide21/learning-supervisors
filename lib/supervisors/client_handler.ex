@@ -1,7 +1,7 @@
 defmodule Supervisors.ClientHandler do
   use GenServer
 
-  alias Supervisors.Client
+  alias Supervisors.{Client, ClientState}
 
   def start_link(client) do
     GenServer.start_link(__MODULE__, client)
@@ -17,6 +17,11 @@ defmodule Supervisors.ClientHandler do
       state: Client.fetch_state(client.parent),
       handler: self
     }
+
+    if ClientState.current_state(client.state) == :init do
+      send_reply("220 Simple Mail Transfer Service Ready", client)
+    end
+
     send self, :listen
     {:noreply, client}
   end
@@ -33,7 +38,6 @@ defmodule Supervisors.ClientHandler do
 
   defp listen(client) do
     client
-      |> prompt
       |> read_command
       |> String.trim
       |> Supervisor.Commands.run(client)
@@ -41,15 +45,10 @@ defmodule Supervisors.ClientHandler do
     send self, :listen
   end
 
-  defp prompt(client) do
-    :ok = :gen_tcp.send(client.socket, "> ")
-    client
-  end
-
-  defp send_reply(nil, client), do: :ok
+  defp send_reply(nil, _), do: :ok
 
   defp send_reply(reply, client) do
-    :ok = :gen_tcp.send(client.socket, reply <> "\n")
+    :ok = :gen_tcp.send(client.socket, reply <> "\r\n")
   end
 
   defp read_command(client) do
