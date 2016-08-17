@@ -24,6 +24,10 @@ defmodule Supervisors.ClientState do
     {"250 Howdy #{name}", state}
   end
 
+  defp run("QUIT", state, current) when current != :reading_message  do
+    {{:halt, "221 closing transmission channel"}, state}
+  end
+
   defp run("MAIL FROM:" <> email, state, current) when current != :reading_message do
     state = state
       |> reset_email

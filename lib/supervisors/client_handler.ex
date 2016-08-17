@@ -31,28 +31,31 @@ defmodule Supervisors.ClientHandler do
     {:noreply, client}
   end
 
-  def handle_info(:exit, client) do
-    Supervisor.stop(client.parent)
-    {:noreply, client}
-  end
-
   defp listen(client) do
     client
       |> read_command
-      |> String.trim
-      |> Supervisor.Commands.run(client)
-      |> send_reply(client)
+      |> run_command(client)
+      |> handle_reply(client)
     send self, :listen
   end
 
-  defp send_reply(nil, _), do: :ok
+  defp run_command(command, %{state: state}) do
+    ClientState.command(state, command)
+  end
 
+  defp handle_reply({:halt, reply}, client) do
+    send_reply(reply, client)
+    Supervisor.stop(client.parent)
+  end
+  defp handle_reply(reply, client), do: send_reply(reply, client)
+
+  defp send_reply(nil, _), do: :ok
   defp send_reply(reply, client) do
     :ok = :gen_tcp.send(client.socket, reply <> "\r\n")
   end
 
   defp read_command(client) do
     {:ok, command} = :gen_tcp.recv(client.socket, 0)
-    command
+    command |> String.trim
   end
 end
