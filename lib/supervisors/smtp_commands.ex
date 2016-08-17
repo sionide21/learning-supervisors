@@ -2,58 +2,72 @@ defmodule Supervisors.SMTPCommands do
   alias Supervisors.Email
 
   def run("EHLO " <> name, state, :init) do
-    state = state |> transition(:ready_for_mail)
-    {"250 Howdy #{name}", state}
+    state
+      |> transition(:ready_for_mail)
+      |> reply("250 Howdy #{name}")
   end
 
   def run("HELO " <> name, state, :init) do
-    state = state |> transition(:ready_for_mail)
-    {"250 Howdy #{name}", state}
+    state
+      |> transition(:ready_for_mail)
+      |> reply("250 Howdy #{name}")
   end
 
   def run("QUIT", state, current) when current != :reading_message  do
-    {{:halt, "221 closing transmission channel"}, state}
+    state |> reply({:halt, "221 closing transmission channel"})
   end
 
   def run("MAIL FROM:" <> email, state, current) when current != :reading_message do
-    state = state
+    state
       |> reset_email
       |> set_email(from: email)
       |> transition(:ready_for_rcpt)
-    {"250 OK", state}
+      |> reply("250 OK")
   end
 
   def run("RCPT TO:" <> email, state, :ready_for_rcpt) do
-    state = state
+    state
       |> set_email(to: email)
       |> transition(:ready_for_data)
-    {"250 OK", state}
+      |> reply("250 OK")
   end
 
   def run("DATA", state, :ready_for_data) do
-    state = state |> transition(:reading_message)
-    {"354 Start mail input; end with <CRLF>.<CRLF>", state}
+    state
+      |> transition(:reading_message)
+      |> reply("354 Start mail input; end with <CRLF>.<CRLF>")
   end
 
   def run(".", %{email: email} = state, :reading_message) do
-    state = state |> transition(:accepted)
     IO.puts ""
     IO.puts "Sent Email: #{email.from} -> #{email.to}"
     IO.puts email.mime
-    {"250 OK", state}
+
+    state
+      |> transition(:accepted)
+      |> reply("250 OK")
   end
 
   def run(txt, state, :reading_message) do
-    state |> set_email(next_line: txt)
-    {nil, state |> set_email(next_line: txt)}
+    state
+      |> set_email(next_line: txt)
+      |> no_reply
   end
 
   def run(_, state, _) do
-    {"503 Bad sequence of commands", state}
+    state |> reply("503 Bad sequence of commands")
   end
 
   defp transition(state, new) do
     %{state | state: new}
+  end
+
+  defp reply(state, message) do
+    {message, state}
+  end
+
+  defp no_reply(state) do
+    {nil, state}
   end
 
   defp reset_email(state) do
