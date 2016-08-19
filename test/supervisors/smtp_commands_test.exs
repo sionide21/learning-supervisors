@@ -9,38 +9,38 @@ defmodule Supervisors.SMTPCommandsTest do
 
     new_state = run("HELO test.com", state)
     |> assert_reply("250")
-    assert new_state.state == :ready_for_mail
+    |> assert_state(:ready_for_mail)
 
-    unchanged = run("HELO test.com", new_state)
+    run("HELO test.com", new_state)
     |> assert_reply("503")
-    assert new_state == unchanged
+    |> assert_unchanged(new_state)
   end
 
   describe "MAIL" do
     test "starts an email" do
       state = %{state: :ready_for_mail, email: nil}
 
-      %{email: email} = run("MAIL FROM: ben@example.net", state)
+      run("MAIL FROM: ben@example.net", state)
       |> assert_reply("250")
-      assert email.from == "ben@example.net"
+      |> assert_email(from: "ben@example.net")
     end
 
     test "resets a message already in progress" do
       email = %Email{from: "ben@example.net", to: ["test@example.com"]}
       state = %{state: :ready_for_data, email: email}
 
-      %{email: email} = run("MAIL FROM: banana@example.net", state)
+      run("MAIL FROM: banana@example.net", state)
       |> assert_reply("250")
-      assert email.from == "banana@example.net"
-      assert email.to == []
+      |> assert_email(from: "banana@example.net")
+      |> assert_email(to: [])
     end
 
     test "cannot be run before HELO" do
       state = %{state: :init, email: nil}
 
-      new_state = run("MAIL FROM: ben@example.net", state)
+      run("MAIL FROM: ben@example.net", state)
       |> assert_reply("503")
-      assert new_state == state
+      |> assert_unchanged(state)
     end
   end
 
@@ -63,9 +63,9 @@ defmodule Supervisors.SMTPCommandsTest do
     test "cannot be run before MAIL" do
       state = %{state: :ready_for_mail, email: nil}
 
-      new_state = run("RCPT TO: ben@example.net", state)
+      run("RCPT TO: ben@example.net", state)
       |> assert_reply("503")
-      assert new_state == state
+      |> assert_unchanged(state)
     end
   end
 
@@ -106,6 +106,11 @@ defmodule Supervisors.SMTPCommandsTest do
     Enum.each email_assertions, fn {field, expected} ->
       assert Map.get(email, field) == expected
     end
+    state
+  end
+
+  defp assert_unchanged(state, original) do
+    assert original == state
     state
   end
 end
