@@ -1,12 +1,12 @@
 defmodule Supervisors.Email do
-  defstruct to: nil, from: nil, mime: ""
+  defstruct to: [], from: nil, mime: ""
 
   def set(email, :from, address) do
     %__MODULE__{email | from: clean(address)}
   end
 
   def set(email, :to, address) do
-    %__MODULE__{email | to: clean(address)}
+    %__MODULE__{email | to: [clean(address) | email.to]}
   end
 
   def set(email, :next_line, line) do

@@ -21,7 +21,7 @@ defmodule Supervisors.ClientState do
   end
 
   def handle_call({:command, command}, _, state) do
-    {response, new_state} = SMTPCommands.run(command, state, state.state)
+    {response, new_state} = SMTPCommands.run(command, state)
     {:reply, response, new_state}
   end
 end
