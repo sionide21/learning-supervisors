@@ -3,14 +3,14 @@ defmodule Supervisors.SMTPCommands do
 
   def run("EHLO " <> name, %{state: :init} = state) do
     state
-      |> transition(:ready_for_mail)
-      |> reply("250 Howdy #{name}")
+    |> transition(:ready_for_mail)
+    |> reply("250 Howdy #{name}")
   end
 
   def run("HELO " <> name, %{state: :init} = state) do
     state
-      |> transition(:ready_for_mail)
-      |> reply("250 Howdy #{name}")
+    |> transition(:ready_for_mail)
+    |> reply("250 Howdy #{name}")
   end
 
   def run("QUIT", %{state: current} = state) when current != :reading_message do
@@ -20,24 +20,24 @@ defmodule Supervisors.SMTPCommands do
   def run("MAIL FROM:" <> email, %{state: current} = state)
   when not current in [:init, :reading_message] do
     state
-      |> reset_email
-      |> set_email(from: email)
-      |> transition(:ready_for_rcpt)
-      |> reply("250 OK")
+    |> reset_email
+    |> set_email(from: email)
+    |> transition(:ready_for_rcpt)
+    |> reply("250 OK")
   end
 
   def run("RCPT TO:" <> email, %{state: current} = state)
   when current in [:ready_for_rcpt, :ready_for_data] do
     state
-      |> set_email(to: email)
-      |> transition(:ready_for_data)
-      |> reply("250 OK")
+    |> set_email(to: email)
+    |> transition(:ready_for_data)
+    |> reply("250 OK")
   end
 
   def run("DATA", %{state: :ready_for_data} = state) do
     state
-      |> transition(:reading_message)
-      |> reply("354 Start mail input; end with <CRLF>.<CRLF>")
+    |> transition(:reading_message)
+    |> reply("354 Start mail input; end with <CRLF>.<CRLF>")
   end
 
   def run(".", %{email: email, state: :reading_message} = state) do
@@ -46,14 +46,14 @@ defmodule Supervisors.SMTPCommands do
     IO.puts email.mime
 
     state
-      |> transition(:accepted)
-      |> reply("250 OK")
+    |> transition(:accepted)
+    |> reply("250 OK")
   end
 
   def run(txt, %{state: :reading_message} = state) do
     state
-      |> set_email(next_line: txt)
-      |> no_reply
+    |> set_email(next_line: txt)
+    |> no_reply
   end
 
   def run(_, state) do
