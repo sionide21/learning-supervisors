@@ -16,6 +16,14 @@ defmodule Supervisors.SMTPCommandsTest do
     |> assert_unchanged(new_state)
   end
 
+  test "invalid commnds get 500" do
+    state = %{state: :init, email: nil}
+
+    run("BANANA", state)
+    |> assert_reply("500")
+    |> assert_unchanged(state)
+  end
+
   describe "MAIL" do
     test "starts an email" do
       state = %{state: :ready_for_mail, email: nil}

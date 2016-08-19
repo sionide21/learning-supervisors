@@ -1,5 +1,13 @@
 defmodule Supervisors.SMTPCommands do
   alias Supervisors.Email
+  @supported_commands [
+    "EHLO",
+    "HELO",
+    "MAIL",
+    "RCPT",
+    "DATA",
+    "QUIT"
+  ]
 
   def run("EHLO " <> name, %{state: :init} = state) do
     state
@@ -56,8 +64,12 @@ defmodule Supervisors.SMTPCommands do
     |> no_reply
   end
 
-  def run(_, state) do
-    state |> reply("503 Bad sequence of commands")
+  def run(cmd, state) do
+    response = String.split(cmd) |> Enum.at(0) |> case do
+      x when x in @supported_commands -> "503 Bad sequence of commands"
+      _ -> "500 Syntax error, command unrecognized"
+    end
+    state |> reply(response)
   end
 
   defp transition(state, new) do
